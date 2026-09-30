@@ -1,0 +1,93 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Jev Agent Guardrail. An HTTP endpoint that scores a proposed agent tool call
+  with Jev (TypeSafe System One model via OpenRouter) and returns allow / ask / block.
+  Every decision is logged to DynamoDB with a TTL.
+
+Parameters:
+  OpenRouterApiKeyParam:
+    Type: String
+    Default: /jev-guardrail/openrouter-api-key
+    Description: SSM SecureString parameter name that holds the OpenRouter API key.
+  JevModel:
+    Type: String
+    Default: typesafe/jev-1.13
+    Description: Pin a version for stable thresholds. Use ~typesafe/jev-latest to track releases.
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 15
+    MemorySize: 256
+    Architectures: [arm64]
+
+Resources:
+
+  DecisionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: decision_id
+          AttributeType: S
+        - AttributeName: session_id
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: N
+      KeySchema:
+        - AttributeName: decision_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: by-session
+          KeySchema:
+            - AttributeName: session_id
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
+
+  GuardApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins: ['*']
+        AllowMethods: [POST, OPTIONS]
+        AllowHeaders: ['content-type']
+
+  GuardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          DECISIONS_TABLE: !Ref DecisionsTable
+          OPENROUTER_API_KEY_PARAM: !Ref OpenRouterApiKeyParam
+          JEV_MODEL: !Ref JevModel
+          LOG_TTL_DAYS: '30'
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref DecisionsTable
+        - Statement:
+            - Effect: Allow
+              Action: ssm:GetParameter
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${OpenRouterApiKeyParam}
+      Events:
+        Guard:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref GuardApi
+            Path: /guard
+            Method: POST
+
+Outputs:
+  GuardEndpoint:
+    Description: POST a proposed tool call here
+    Value: !Sub https://${GuardApi}.execute-api.${AWS::Region}.amazonaws.com/guard
+  DecisionsTableName:
+    Value: !Ref DecisionsTable
