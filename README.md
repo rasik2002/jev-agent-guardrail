@@ -158,10 +158,6 @@ Check the live Jev price on the [model page](https://openrouter.ai/~typesafe/jev
 - The API key comes from SSM SecureString, read once per Lambda container. IAM is scoped to that single parameter and write-only on the table.
 - The endpoint has no auth of its own. Put it behind IAM auth, a Lambda authorizer, or a VPC before exposing it beyond a demo.
 
-## Built with Kiro
-
-I built this with [Kiro](https://kiro.dev). The `.kiro/` folder is part of the repo on purpose: steering files that encode the project rules the agent followed on every turn, a spec (requirements, design, tasks), hooks that run the tests on save and lint the SAM template, a custom read-only reviewer agent, and MCP config for AWS docs. See [`.kiro/README.md`](.kiro/README.md) for how each one was used. It is a working example of driving an AI-assisted build with real engineering guardrails, which is fitting for a project that is itself a guardrail.
-
 ## License
 
 MIT
