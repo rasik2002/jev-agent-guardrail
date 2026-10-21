@@ -56,8 +56,12 @@ Resources:
     Properties:
       CorsConfiguration:
         AllowOrigins: ['*']
-        AllowMethods: [POST, OPTIONS]
+        AllowMethods: [GET, POST, OPTIONS]
         AllowHeaders: ['content-type']
+      # Protect the open demo endpoint from runaway cost: cap request rate.
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
 
   GuardFunction:
     Type: AWS::Serverless::Function
@@ -84,8 +88,17 @@ Resources:
             ApiId: !Ref GuardApi
             Path: /guard
             Method: POST
+        Ui:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref GuardApi
+            Path: /
+            Method: GET
 
 Outputs:
+  UiUrl:
+    Description: Open this in a browser to try the guardrail
+    Value: !Sub https://${GuardApi}.execute-api.${AWS::Region}.amazonaws.com/
   GuardEndpoint:
     Description: POST a proposed tool call here
     Value: !Sub https://${GuardApi}.execute-api.${AWS::Region}.amazonaws.com/guard

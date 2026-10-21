@@ -30,6 +30,14 @@ TABLE_NAME = os.environ.get("DECISIONS_TABLE", "")
 API_KEY_PARAM = os.environ.get("OPENROUTER_API_KEY_PARAM", "/jev-guardrail/openrouter-api-key")
 LOG_TTL_DAYS = int(os.environ.get("LOG_TTL_DAYS", "30"))
 
+# The demo UI, loaded once per container and served on GET /.
+_UI_PATH = os.path.join(os.path.dirname(__file__), "index.html")
+try:
+    with open(_UI_PATH, encoding="utf-8") as _f:
+        _UI_HTML = _f.read()
+except OSError:
+    _UI_HTML = "<h1>Jev Agent Guardrail</h1><p>POST a tool call to /guard.</p>"
+
 # Module-level clients are reused across warm invocations.
 _ddb = boto3.resource("dynamodb")
 _ssm = boto3.client("ssm")
@@ -63,7 +71,21 @@ def _response(status: int, body: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _method(event: dict[str, Any]) -> str:
+    """HTTP API (v2) puts the method under requestContext.http.method."""
+    ctx = event.get("requestContext", {})
+    return (ctx.get("http", {}) or {}).get("method", "") or event.get("httpMethod", "")
+
+
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
+    # GET serves the demo UI so a human can try the guardrail in a browser.
+    if _method(event) == "GET":
+        return {
+            "statusCode": 200,
+            "headers": {"Content-Type": "text/html; charset=utf-8"},
+            "body": _UI_HTML,
+        }
+
     try:
         body = json.loads(event.get("body") or "{}")
     except json.JSONDecodeError:
