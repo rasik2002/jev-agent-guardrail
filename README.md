@@ -160,7 +160,7 @@ Check the live Jev price on the [model page](https://openrouter.ai/~typesafe/jev
 
 ## Built with Kiro
 
-This repo was built with [Kiro](https://kiro.dev) for the Kiro University Challenge. The `.kiro/` folder is part of the deliverable: steering files that encode the project rules, a spec (requirements, design, tasks), hooks that run the tests on save and lint the SAM template, a custom reviewer agent, and MCP config for AWS docs. See [`.kiro/README.md`](.kiro/README.md) for how each was used.
+I built this with [Kiro](https://kiro.dev). The `.kiro/` folder is part of the repo on purpose: steering files that encode the project rules the agent followed on every turn, a spec (requirements, design, tasks), hooks that run the tests on save and lint the SAM template, a custom read-only reviewer agent, and MCP config for AWS docs. See [`.kiro/README.md`](.kiro/README.md) for how each one was used. It is a working example of driving an AI-assisted build with real engineering guardrails, which is fitting for a project that is itself a guardrail.
 
 ## License
 
